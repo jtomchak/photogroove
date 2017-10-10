@@ -23,6 +23,7 @@ photoArray =
 type alias Model =
     { photos : List Photo
     , selectedUrl : String
+    , chosenSize : ThumbnailSize
     }
 
 
@@ -34,6 +35,7 @@ init =
             , { url = "3.jpeg" }
             ]
       , selectedUrl = "2.jpeg"
+      , chosenSize = Medium
       }
     , Cmd.none
     )
@@ -41,31 +43,46 @@ init =
 
 
 ---- UPDATE ----
+--Defining a union type
 
 
-type alias Msg =
-    { operation : String, data : String }
+type ThumbnailSize
+    = Small
+    | Medium
+    | Large
 
 
+type Msg
+    = SelectByUrl String
+    | SurpriseMe
+    | SetSize ThumbnailSize
 
---with only one action, we don't need to pattern match
+
+getPhotoUrl : Int -> String
+getPhotoUrl index =
+    case Array.get index photoArray of
+        Just photo ->
+            photo.url
+
+        Nothing ->
+            ""
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         _ =
-            Debug.log "Message Data" msg.data
+            Debug.log "Message Data" msg
     in
-    case msg.operation of
-        "SELECTED_PHOTO" ->
-            ( { model | selectedUrl = msg.data }, Cmd.none )
+    case msg of
+        SelectByUrl url ->
+            ( { model | selectedUrl = url }, Cmd.none )
 
-        "SUPRISE_ME" ->
+        SurpriseMe ->
             ( { model | selectedUrl = "2.jpeg" }, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
+        SetSize size ->
+            ( { model | chosenSize = size }, Cmd.none )
 
 
 
@@ -82,9 +99,14 @@ view model =
     div [ class "content" ]
         [ h1 [] [ text "Photo Groove" ]
         , button
-            [ onClick { operation = "SUPRISE_ME", data = "" } ]
+            [ onClick SurpriseMe ]
             [ text "Surprise Me!" ]
-        , div [ id "thumbnails" ]
+        , h3 [] [ text "Thumbnail Size:" ]
+        , div [ id "choose-size" ]
+            (List.map (viewSizeChoose model.chosenSize) [ Small, Medium, Large ])
+
+        -- [ viewSizeChoose Small, viewSizeChoose Medium, viewSizeChoose Large ]
+        , div [ id "thumbnails", class (sizeToString model.chosenSize) ]
             -- (List.map (\photo -> viewThumbnail model.selectedUrl photo) model.photos)
             -- partially applying a function..Definition needed audio
             (List.map
@@ -127,9 +149,48 @@ viewThumbnail selectedUrl thumbnail =
     img
         [ src (urlPrefix ++ thumbnail.url)
         , classList [ ( "selected", selectedUrl == thumbnail.url ) ]
-        , onClick { operation = "SELECTED_PHOTO", data = thumbnail.url }
+        , onClick (SelectByUrl thumbnail.url)
         ]
         []
+
+
+
+--helper function with radio buttons to choose size,
+--_type bc type is a reserved word in Elm.
+
+
+viewSizeChoose : ThumbnailSize -> ThumbnailSize -> Html Msg
+viewSizeChoose chosenSize size =
+    label []
+        [ input
+            [ type_ "radio"
+            , name "size"
+            , onClick (SetSize size)
+            , if size == chosenSize then
+                checked True
+              else
+                checked False
+            ]
+            []
+        , text (sizeToString size)
+        ]
+
+
+
+--no need for a default. we've defined thumbnailsize, and it can only be one of these 3. that's pretty rad.
+
+
+sizeToString : ThumbnailSize -> String
+sizeToString size =
+    case size of
+        Small ->
+            "small"
+
+        Medium ->
+            "med"
+
+        Large ->
+            "large"
 
 
 
