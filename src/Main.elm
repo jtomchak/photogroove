@@ -23,19 +23,17 @@ photoArray =
 
 type alias Model =
     { photos : List Photo
-    , selectedUrl : String
+    , selectedUrl : Maybe String
+    , loadingError : Maybe String
     , chosenSize : ThumbnailSize
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { photos =
-            [ { url = "1.jpeg" }
-            , { url = "2.jpeg" }
-            , { url = "3.jpeg" }
-            ]
-      , selectedUrl = "2.jpeg"
+    ( { photos = []
+      , selectedUrl = Nothing
+      , loadingError = Nothing
       , chosenSize = Medium
       }
     , Cmd.none
@@ -60,19 +58,14 @@ type Msg
     | SetSize ThumbnailSize
 
 
-getPhotoUrl : Int -> String
+getPhotoUrl : Int -> Maybe String
 getPhotoUrl index =
     case Array.get index photoArray of
         Just photo ->
-            photo.url
+            Just photo.url
 
         Nothing ->
-            ""
-
-
-randomPhotoPicker : Random.Generator Int
-randomPhotoPicker =
-    Random.int 0 (Array.length photoArray - 1)
+            Nothing
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -84,16 +77,45 @@ update msg model =
     --case expression
     case msg of
         SelectByUrl url ->
-            ( { model | selectedUrl = url }, Cmd.none )
+            ( { model | selectedUrl = Just url }, Cmd.none )
 
         SurpriseMe ->
+            let
+                randomPhotoPicker : Random.Generator Int
+                randomPhotoPicker =
+                    Random.int 0 (List.length model.photos - 1)
+            in
             ( model, Random.generate SelectByIndex randomPhotoPicker )
 
         SetSize size ->
             ( { model | chosenSize = size }, Cmd.none )
 
         SelectByIndex index ->
-            ( { model | selectedUrl = getPhotoUrl index }, Cmd.none )
+            let
+                -- 1 case expression
+                -- newSelectedPhoto : Maybe Photo
+                -- newSelectedPhoto =
+                --     Array.get index (Array.fromList model.photos)
+                -- newSelectedUrl : Maybe String
+                -- newSelectedUrl =
+                --     case newSelectedPhoto of
+                --         Just photo ->
+                --             Just photo.url
+                --         Nothing ->
+                --             Nothing
+                -- 2 maybe map
+                -- newSelectedUrl : Maybe String
+                -- newSelectedUrl =
+                --     Maybe.map (\photo -> photo.url) (Array.get index (Array.fromList model.photos))
+                -- 3 pipes
+                newSelectedUrl : Maybe String
+                newSelectedUrl =
+                    model.photos
+                        |> Array.fromList
+                        |> Array.get index
+                        |> Maybe.map .url
+            in
+            ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
 
 
 
@@ -124,12 +146,22 @@ view model =
                 (viewThumbnail model.selectedUrl)
                 model.photos
             )
-        , img
-            [ class "large"
-            , src (urlPrefix ++ "large/" ++ model.selectedUrl)
-            ]
-            []
+        , viewLarge model.selectedUrl
         ]
+
+
+viewLarge : Maybe String -> Html Msg
+viewLarge maybeUrl =
+    case maybeUrl of
+        Nothing ->
+            text ""
+
+        Just url ->
+            img
+                [ class "large"
+                , src (urlPrefix ++ "large/" ++ url)
+                ]
+                []
 
 
 
@@ -152,14 +184,11 @@ Excerpt From: Richard Feldman. “Elm in Action MEAP V05.” iBooks.
 -- viewThumbnail : String -> { a | url : String } -> Html msg
 
 
-viewThumbnail :
-    String
-    -> Photo
-    -> Html Msg
+viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
     img
         [ src (urlPrefix ++ thumbnail.url)
-        , classList [ ( "selected", selectedUrl == thumbnail.url ) ]
+        , classList [ ( "selected", selectedUrl == Just thumbnail.url ) ]
         , onClick (SelectByUrl thumbnail.url)
         ]
         []
