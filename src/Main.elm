@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
+import Http
 import Random
 
 
@@ -29,6 +30,16 @@ type alias Model =
     }
 
 
+initialCmd : Cmd Msg
+initialCmd =
+    -- Http.send
+    --     (\result -> LoadPhotos result)
+    --     (Http.getString "http://elm-in-action.com/photos/list")
+    "http://elm-in-action.com/photos/list"
+        |> Http.getString
+        |> Http.send LoadPhotos
+
+
 init : ( Model, Cmd Msg )
 init =
     ( { photos = []
@@ -36,7 +47,7 @@ init =
       , loadingError = Nothing
       , chosenSize = Medium
       }
-    , Cmd.none
+    , initialCmd
     )
 
 
@@ -56,6 +67,7 @@ type Msg
     | SelectByIndex Int
     | SurpriseMe
     | SetSize ThumbnailSize
+    | LoadPhotos (Result Http.Error String)
 
 
 getPhotoUrl : Int -> Maybe String
@@ -116,6 +128,27 @@ update msg model =
                         |> Maybe.map .url
             in
             ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
+
+        LoadPhotos result ->
+            case result of
+                Ok responseStr ->
+                    let
+                        urls =
+                            String.split "," responseStr
+
+                        photos =
+                            -- List.map (\url -> { url = url }) urls
+                            List.map Photo urls
+                    in
+                    ( { model
+                        | photos = photos
+                        , selectedUrl = List.head urls
+                      }
+                    , Cmd.none
+                    )
+
+                Err httpError ->
+                    ( model, Cmd.none )
 
 
 
@@ -243,5 +276,5 @@ main =
         { view = view
         , init = init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = \_ -> Sub.none
         }
