@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
+import Random
 
 
 ---- MODEL ----
@@ -54,6 +55,7 @@ type ThumbnailSize
 
 type Msg
     = SelectByUrl String
+    | SelectByIndex Int
     | SurpriseMe
     | SetSize ThumbnailSize
 
@@ -68,21 +70,30 @@ getPhotoUrl index =
             ""
 
 
+randomPhotoPicker : Random.Generator Int
+randomPhotoPicker =
+    Random.int 0 (Array.length photoArray - 1)
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         _ =
             Debug.log "Message Data" msg
     in
+    --case expression
     case msg of
         SelectByUrl url ->
             ( { model | selectedUrl = url }, Cmd.none )
 
         SurpriseMe ->
-            ( { model | selectedUrl = "2.jpeg" }, Cmd.none )
+            ( model, Random.generate SelectByIndex randomPhotoPicker )
 
         SetSize size ->
             ( { model | chosenSize = size }, Cmd.none )
+
+        SelectByIndex index ->
+            ( { model | selectedUrl = getPhotoUrl index }, Cmd.none )
 
 
 
