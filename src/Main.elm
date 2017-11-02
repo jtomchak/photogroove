@@ -107,9 +107,7 @@ update msg model =
             in
             ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
 
-        LoadPhotos result ->
-            case result of
-                Ok responseStr ->
+        LoadPhotos (Ok responseStr) ->
                     let
                         urls =
                             String.split "," responseStr
@@ -124,8 +122,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err httpError ->
-                    ( model, Cmd.none )
+        LoadPhotos (Err _) ->
+            ( { model | loadingError = Just "Error! (Try turning it off and on again?)"}, Cmd.none)
 
 
 
@@ -215,7 +213,18 @@ sizeToString size =
         Large ->
             "large"
 
-
+viewOrError : Model -> Html Msg
+viewOrError model = 
+    case model.loadingError of
+        Nothing ->
+            view model
+            
+        Just errorMessage ->
+            div [ class "error-message"]
+                [ h1 [] [text "Photo Groove"] 
+                , p [] [text errorMessage]
+                ]
+            
 
 ---- PROGRAM ----
 
@@ -223,7 +232,7 @@ sizeToString size =
 main : Program Never Model Msg
 main =
     Html.program
-        { view = view
+        { view = viewOrError
         , init = init
         , update = update
         , subscriptions = \_ -> Sub.none
