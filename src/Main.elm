@@ -2,16 +2,41 @@ module Main exposing (..)
 
 import Array exposing (Array)
 import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (id, class, classList, src, name, type_, title, checked)
 import Html.Events exposing (onClick)
+import Json.Decode exposing (string, int, list, Decoder)
+import Json.Decode.Pipeline exposing (decode, required, optional)
 import Http
 import Random
 
 
 ---- MODEL ----
 
+
 type alias Photo =
-    { url : String }
+    { url : String
+    , size : Int
+    , title : String
+    }
+
+
+
+-- this will need to an object with a respective fields url, size, and title.
+
+
+photoDecoder : Decoder Photo
+photoDecoder =
+    decode Photo
+        |> required "url" string
+        |> required "size" int
+        |> optional "title" string "(untitled)"
+
+
+
+-- Not required because a type alias will also serve as a constuctor and that's what we want, a Photo
+-- buildPhoto : String -> Int -> String -> Photo
+-- buildPhoto url size title =
+--     { url = url, size = size, title = title }
 
 
 photoArray : Array Photo
@@ -80,41 +105,41 @@ update msg model =
         _ =
             Debug.log "Message Data" msg
     in
-    --case expression
-    case msg of
-        SelectByUrl url ->
-            ( { model | selectedUrl = Just url }, Cmd.none )
+        --case expression
+        case msg of
+            SelectByUrl url ->
+                ( { model | selectedUrl = Just url }, Cmd.none )
 
-        SurpriseMe ->
-            let
-                randomPhotoPicker : Random.Generator Int
-                randomPhotoPicker =
-                    Random.int 0 (List.length model.photos - 1)
-            in
-            ( model, Random.generate SelectByIndex randomPhotoPicker )
+            SurpriseMe ->
+                let
+                    randomPhotoPicker : Random.Generator Int
+                    randomPhotoPicker =
+                        Random.int 0 (List.length model.photos - 1)
+                in
+                    ( model, Random.generate SelectByIndex randomPhotoPicker )
 
-        SetSize size ->
-            ( { model | chosenSize = size }, Cmd.none )
+            SetSize size ->
+                ( { model | chosenSize = size }, Cmd.none )
 
-        SelectByIndex index ->
-            let
-                newSelectedUrl : Maybe String
-                newSelectedUrl =
-                    model.photos
-                        |> Array.fromList
-                        |> Array.get index
-                        |> Maybe.map .url
-            in
-            ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
+            SelectByIndex index ->
+                let
+                    newSelectedUrl : Maybe String
+                    newSelectedUrl =
+                        model.photos
+                            |> Array.fromList
+                            |> Array.get index
+                            |> Maybe.map .url
+                in
+                    ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
 
-        LoadPhotos (Ok responseStr) ->
-                    let
-                        urls =
-                            String.split "," responseStr
+            LoadPhotos (Ok responseStr) ->
+                let
+                    urls =
+                        String.split "," responseStr
 
-                        photos =
-                            List.map Photo urls
-                    in
+                    photos =
+                        List.map Photo urls
+                in
                     ( { model
                         | photos = photos
                         , selectedUrl = List.head urls
@@ -122,8 +147,8 @@ update msg model =
                     , Cmd.none
                     )
 
-        LoadPhotos (Err _) ->
-            ( { model | loadingError = Just "Error! (Try turning it off and on again?)"}, Cmd.none)
+            LoadPhotos (Err _) ->
+                ( { model | loadingError = Just "Error! (Try turning it off and on again?)" }, Cmd.none )
 
 
 
@@ -145,7 +170,6 @@ view model =
         , h3 [] [ text "Thumbnail Size:" ]
         , div [ id "choose-size" ]
             (List.map (viewSizeChoose model.chosenSize) [ Small, Medium, Large ])
-
         , div [ id "thumbnails", class (sizeToString model.chosenSize) ]
             (List.map
                 (viewThumbnail model.selectedUrl)
@@ -167,8 +191,6 @@ viewLarge maybeUrl =
                 , src (urlPrefix ++ "large/" ++ url)
                 ]
                 []
-
-
 
 
 viewThumbnail : Maybe String -> Photo -> Html Msg
@@ -198,9 +220,6 @@ viewSizeChoose chosenSize size =
         ]
 
 
-
-
-
 sizeToString : ThumbnailSize -> String
 sizeToString size =
     case size of
@@ -213,18 +232,20 @@ sizeToString size =
         Large ->
             "large"
 
+
 viewOrError : Model -> Html Msg
-viewOrError model = 
+viewOrError model =
     case model.loadingError of
         Nothing ->
             view model
-            
+
         Just errorMessage ->
-            div [ class "error-message"]
-                [ h1 [] [text "Photo Groove"] 
-                , p [] [text errorMessage]
+            div [ class "error-message" ]
+                [ h1 [] [ text "Photo Groove" ]
+                , p [] [ text errorMessage ]
                 ]
-            
+
+
 
 ---- PROGRAM ----
 
