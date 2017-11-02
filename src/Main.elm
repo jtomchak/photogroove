@@ -9,9 +9,6 @@ import Random
 
 
 ---- MODEL ----
--- getting this right is gonna take a lot of practice. I keep wanting to dive into the implementation, and the compiler is telling me NOPE, not yet. But the pay off is once the compiler is happy, it's always working from the browser!
---We're saying that a Photo is the same type as a record with property url as a sting, so we can use type Photo where we'd usually say { url : String }
-
 
 type alias Photo =
     { url : String }
@@ -32,9 +29,6 @@ type alias Model =
 
 initialCmd : Cmd Msg
 initialCmd =
-    -- Http.send
-    --     (\result -> LoadPhotos result)
-    --     (Http.getString "http://elm-in-action.com/photos/list")
     "http://elm-in-action.com/photos/list"
         |> Http.getString
         |> Http.send LoadPhotos
@@ -104,22 +98,6 @@ update msg model =
 
         SelectByIndex index ->
             let
-                -- 1 case expression
-                -- newSelectedPhoto : Maybe Photo
-                -- newSelectedPhoto =
-                --     Array.get index (Array.fromList model.photos)
-                -- newSelectedUrl : Maybe String
-                -- newSelectedUrl =
-                --     case newSelectedPhoto of
-                --         Just photo ->
-                --             Just photo.url
-                --         Nothing ->
-                --             Nothing
-                -- 2 maybe map
-                -- newSelectedUrl : Maybe String
-                -- newSelectedUrl =
-                --     Maybe.map (\photo -> photo.url) (Array.get index (Array.fromList model.photos))
-                -- 3 pipes
                 newSelectedUrl : Maybe String
                 newSelectedUrl =
                     model.photos
@@ -137,7 +115,6 @@ update msg model =
                             String.split "," responseStr
 
                         photos =
-                            -- List.map (\url -> { url = url }) urls
                             List.map Photo urls
                     in
                     ( { model
@@ -171,10 +148,7 @@ view model =
         , div [ id "choose-size" ]
             (List.map (viewSizeChoose model.chosenSize) [ Small, Medium, Large ])
 
-        -- [ viewSizeChoose Small, viewSizeChoose Medium, viewSizeChoose Large ]
         , div [ id "thumbnails", class (sizeToString model.chosenSize) ]
-            -- (List.map (\photo -> viewThumbnail model.selectedUrl photo) model.photos)
-            -- partially applying a function..Definition needed audio
             (List.map
                 (viewThumbnail model.selectedUrl)
                 model.photos
@@ -198,24 +172,6 @@ viewLarge maybeUrl =
 
 
 
---type infered copy to code is super nice
---classList remindes me of ng-class from AngularJS
---on shit it's like connect(mapStatetoProps)(App) *facepalm*
-{--Version in Javascipt, bc JS -> Elm
-“function viewThumbnail(selectedUrl) {
-    return function(thumbnail) {
-        if (selectedUrl === thumbnail.url) {
-            // Render a selected thumbnail here
-        } else {
-            // Render a non-selected thumbnail here
-        }
-    };
-}”
-Excerpt From: Richard Feldman. “Elm in Action MEAP V05.” iBooks.
---}
---Before we added an onclick to it, now it's Html and a record msg?
--- viewThumbnail : String -> { a | url : String } -> Html msg
-
 
 viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
@@ -225,11 +181,6 @@ viewThumbnail selectedUrl thumbnail =
         , onClick (SelectByUrl thumbnail.url)
         ]
         []
-
-
-
---helper function with radio buttons to choose size,
---_type bc type is a reserved word in Elm.
 
 
 viewSizeChoose : ThumbnailSize -> ThumbnailSize -> Html Msg
@@ -250,7 +201,6 @@ viewSizeChoose chosenSize size =
 
 
 
---no need for a default. we've defined thumbnailsize, and it can only be one of these 3. that's pretty rad.
 
 
 sizeToString : ThumbnailSize -> String
