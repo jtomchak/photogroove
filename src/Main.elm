@@ -2,17 +2,31 @@ module Main exposing (..)
 
 import Array exposing (Array)
 import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (id, class, classList, src, name, type_, title, checked)
 import Html.Events exposing (onClick)
+import Json.Decode exposing (string, int, list, Decoder, field, map3, maybe)
 import Http
 import Random
 
 
 ---- MODEL ----
+-- updated the alias type of our photo to reflect
+-- the additional properties of it.
 
 
 type alias Photo =
-    { url : String }
+    { url : String
+    , size : Int
+    , title : Maybe String
+    }
+
+
+photoDecoder : Decoder Photo
+photoDecoder =
+    map3 Photo
+        (field "url" string)
+        (field "size" int)
+        (maybe (field "title" string))
 
 
 photoArray : Array Photo
@@ -28,10 +42,16 @@ type alias Model =
     }
 
 
+
+{-
+   http.get takes a decoder and string, returns a Request value, not just a Request String like getString. Well, we build a decoder.
+-}
+
+
 initialCmd : Cmd Msg
 initialCmd =
-    "http://elm-in-action.com/photos/list"
-        |> Http.getString
+    list photoDecoder
+        |> Http.get "http://elm-in-action.com/photos/list.json"
         |> Http.send LoadPhotos
 
 
@@ -62,7 +82,7 @@ type Msg
     | SelectByIndex Int
     | SurpriseMe
     | SetSize ThumbnailSize
-    | LoadPhotos (Result Http.Error String)
+    | LoadPhotos (Result Http.Error (List Photo))
 
 
 getPhotoUrl : Int -> Maybe String
@@ -108,20 +128,13 @@ update msg model =
                 in
                     ( { model | selectedUrl = newSelectedUrl }, Cmd.none )
 
-            LoadPhotos (Ok responseStr) ->
-                let
-                    urls =
-                        String.split "," responseStr
-
-                    photos =
-                        List.map Photo urls
-                in
-                    ( { model
-                        | photos = photos
-                        , selectedUrl = List.head urls
-                      }
-                    , Cmd.none
-                    )
+            LoadPhotos (Ok response) ->
+                ( { model
+                    | photos = response
+                    , selectedUrl = Maybe.map .url (List.head response)
+                  }
+                , Cmd.none
+                )
 
             LoadPhotos (Err _) ->
                 ( { model | loadingError = Just "Error! (Try turning it off and on again?)" }, Cmd.none )
@@ -173,10 +186,21 @@ viewThumbnail : Maybe String -> Photo -> Html Msg
 viewThumbnail selectedUrl thumbnail =
     img
         [ src (urlPrefix ++ thumbnail.url)
+        , hasTitle thumbnail.title thumbnail.size
         , classList [ ( "selected", selectedUrl == Just thumbnail.url ) ]
         , onClick (SelectByUrl thumbnail.url)
         ]
         []
+
+
+hasTitle : Maybe String -> Int -> Attribute msg
+hasTitle maybeTitle size =
+    case maybeTitle of
+        Nothing ->
+            title "None"
+
+        Just photoTitle ->
+            title (photoTitle ++ " [" ++ toString size ++ " KB]")
 
 
 viewSizeChoose : ThumbnailSize -> ThumbnailSize -> Html Msg
